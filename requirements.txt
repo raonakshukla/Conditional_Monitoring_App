@@ -1,7 +1,7 @@
-numpy
-pandas
-matplotlib
-openpyxl
-scipy
 streamlit
-itertools
+pandas
+numpy
+openpyxl
+matplotlib
+plotly
+scipy
