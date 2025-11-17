@@ -120,7 +120,7 @@ def coherence(x: np.ndarray, y: np.ndarray, fs: float, nperseg_sec: float,
     nperseg = int(max(8, round(nperseg_sec * fs)))
     noverlap = int(round(noverlap_ratio * nperseg))
     f, Cxy = signal.coherence(x, y, fs=fs, window=window,
-                              nperseg=nperseg_sec, noverlap=noverlap_ratio, detrend="constant")
+                              nperseg=nperseg, noverlap=noverlap_ratio, detrend="constant")
     return f, Cxy
 
 # Function for Magnitude to Decibel Conversion
@@ -644,3 +644,4 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
+
