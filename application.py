@@ -458,7 +458,7 @@ with tab2:
         st.pyplot(fig)
 
 with tab3:
-    subtab = st.radio("Select View", ["Transmissibilty_PSD", "Transmissibilty_at_1P"], key="subtab3")
+    subtab = st.radio("Select View", ["Transmissibilty_PSD", "Transmissibilty_at_Modes"], key="subtab3")
     if subtab == "Transmissibilty_PSD":
         psd_dict = {}
         axes = ["edge", "span", "flap"]
@@ -680,6 +680,7 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
+
 
 
 
