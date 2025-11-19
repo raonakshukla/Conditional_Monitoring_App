@@ -582,11 +582,11 @@ with tab3:
                 if ax in pairs[i][0] and ax in pairs[i][1]:
                     trans_col.append(pairs[i])
         for i in trans_col:
-            t = transmissibility(psd_dict[i[0]][0][1],psd_dict[i[1]][0][1])
+            t = transmissibility(psd_dict[i[1]][0][1],psd_dict[i[0]][0][1])
             t1_psd.append(t)
             inter = interp(fsd,t,f0)
             trans_t1.append(inter)
-            t = transmissibility(psd_dict[i[0]][1][1],psd_dict[i[1]][1][1])
+            t = transmissibility(psd_dict[i[1]][1][1],psd_dict[i[0]][1][1])
             t2_psd.append(t)
             inter = interp(fsd,t,f0)
             trans_t2.append(inter)
@@ -679,6 +679,7 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
+
 
 
 
