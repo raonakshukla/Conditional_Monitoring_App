@@ -389,6 +389,24 @@ with tab2:
         blades = [1, 2, 3]
 
         blade = st.selectbox("Select Blade", blades, index=0, key=f"blade_selector_sub_tab2")
+        mode_map = {    '1P'    : 0.208333,
+                        'Mode_1': 1.05,
+                        'Mode_2': 4.3,
+                        'Mode_3': 6.25,
+                        'Mode_4': 8.2,
+                        'Mode_5': 12.5,
+                        'Mode_6': 16.5,
+                        'Mode_7': 21.05,
+                        'Mode_8': 24.85
+                    }
+        selection = st.radio(
+                                "Modes",
+                                options=list(mode_map.keys()),
+                                horizontal=True,
+                                format_func=lambda option: f"{option} ({mode_map[option]} Hz)"
+                            )
+
+        f0 = mode_map[selection]
         for loc in ["root", "tip"]:
             for ax in axes:
                 name = f"B{blade}_{loc}_{ax}"
@@ -406,10 +424,10 @@ with tab2:
             y1 = preprocess_series(z4, fs=fs, hp_cut_hz= hp_cut_hz, hp_order=hp_order, type=detrend)
             f, Cxy = coherence(x, y, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
                             window = window)
-            Coh_1p_T1[(col1,col2)] = interp(f,Cxy,0.20833333333333334)
+            Coh_1p_T1[(col1,col2)] = interp(f,Cxy,f0)
             f1, Cxy1 = coherence(x1, y1, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
                             window = window)
-            Coh_1p_T2[(col1,col2)] = interp(f1,Cxy1,0.20833333333333334)
+            Coh_1p_T2[(col1,col2)] = interp(f1,Cxy1,f0)
             csd_dict[(col1,col2)] =  [(f, Cxy), (f1, Cxy1)]
 
         df_1 = pd.DataFrame.from_dict(Coh_1p_T1, orient='index',columns=['T1_Coh_1P'])
@@ -644,6 +662,7 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
+
 
 
 
