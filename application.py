@@ -448,7 +448,7 @@ with tab2:
         ax.set_xticks(x)
         ax.set_xticklabels(df.index, rotation=90)
         ax.set_ylabel("Coherence")
-        ax.set_title("T1 vs T2 Coherence at 1P")
+        ax.set_title(f"T1 vs T2 Coherence at {selection} ({f0:.3f} Hz)")
         ax.legend()
         ax.grid(axis="y", alpha=0.3)
 
@@ -492,7 +492,7 @@ with tab3:
                 col.append(name)
 
         pairs = list(itertools.combinations(col, 2))
-        for i in range(0, len(pairs)-1):
+        for i in range(0, len(pairs)):
             for ax in axes:
                 if ax in pairs[i][0] and ax in pairs[i][1]:
                     trans_col.append(pairs[i])
@@ -577,7 +577,7 @@ with tab3:
                 col.append(name)
 
         pairs = list(itertools.combinations(col, 2))
-        for i in range(0, len(pairs)-1):
+        for i in range(0, len(pairs)):
             for ax in axes:
                 if ax in pairs[i][0] and ax in pairs[i][1]:
                     trans_col.append(pairs[i])
@@ -607,8 +607,8 @@ with tab3:
         ax.set_xticks(x)
         ax.set_xticklabels(labels)
         ax.set_xlabel("Axis")
-        ax.set_ylabel("Transmissibility at 1P")
-        ax.set_title("Transmissibility Comparison at 1P")
+        ax.set_ylabel(f"Transmissibility at {selection} ({f0:.3f} Hz)")
+        ax.set_title(f"Transmissibility Comparison at {selection}")
 
         # Legend and grid
         ax.legend()
@@ -679,6 +679,7 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
+
 
 
 
