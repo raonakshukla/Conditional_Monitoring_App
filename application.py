@@ -547,7 +547,7 @@ with tab3:
                                 "Modes",
                                 options=list(mode_map.keys()),
                                 horizontal=True,
-                                format_func=lambda option: f"{option} ({mode_map[option]} Hz)"
+                                format_func=lambda option: f"{option} ({mode_map[option]} Hz, key='trans')"
                             )
 
         f0 = mode_map[selection]        
@@ -679,6 +679,7 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
+
 
 
 
