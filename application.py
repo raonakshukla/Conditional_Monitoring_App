@@ -389,7 +389,7 @@ with tab2:
         blades = [1, 2, 3]
 
         blade = st.selectbox("Select Blade", blades, index=0, key=f"blade_selector_sub_tab2")
-        mode_map = {    '1P'    : 0.208333,
+        mode_map = {    '1P': 0.208333,
                         'Mode_1': 1.05,
                         'Mode_2': 4.3,
                         'Mode_3': 6.25,
@@ -662,6 +662,7 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
+
 
 
 
