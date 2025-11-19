@@ -308,7 +308,7 @@ with tab1:
         st.pyplot(fig)
 
 with tab2:
-    subtab = st.radio("Select View", ["Coherence_PSD", "Coherence_at_1P"], key="subtab2")
+    subtab = st.radio("Select View", ["Coherence_PSD", "Coherence_at_Modes"], key="subtab2")
     if subtab == "Coherence_PSD":
     # Build channel names
         csd_dict = {}
@@ -533,6 +533,24 @@ with tab3:
         blades = [1, 2, 3]
 
         blade = st.selectbox("Select Blade", blades, index=0, key=f"blade_selector_tab3")
+        mode_map = {    '1P': 0.208333,
+                        'Mode_1': 1.05,
+                        'Mode_2': 4.3,
+                        'Mode_3': 6.25,
+                        'Mode_4': 8.2,
+                        'Mode_5': 12.5,
+                        'Mode_6': 16.5,
+                        'Mode_7': 21.05,
+                        'Mode_8': 24.85
+                    }
+        selection = st.radio(
+                                "Modes",
+                                options=list(mode_map.keys()),
+                                horizontal=True,
+                                format_func=lambda option: f"{option} ({mode_map[option]} Hz)"
+                            )
+
+        f0 = mode_map[selection]
         
         for loc in ["root", "tip"]:
             for ax in axes:
@@ -567,11 +585,11 @@ with tab3:
         for i in trans_col:
             t = transmissibility(psd_dict[i[0]][0][1],psd_dict[i[1]][0][1])
             t1_psd.append(t)
-            inter = interp(fsd,t,0.20833333333333334)
+            inter = interp(fsd,t,f0)
             trans_t1.append(inter)
             t = transmissibility(psd_dict[i[0]][1][1],psd_dict[i[1]][1][1])
             t2_psd.append(t)
-            inter = interp(fsd,t,0.20833333333333334)
+            inter = interp(fsd,t,f0)
             trans_t2.append(inter)
         
         # Comparison of Transmissibility for Turbine 1 and Turbine 2
@@ -662,6 +680,7 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
+
 
 
 
