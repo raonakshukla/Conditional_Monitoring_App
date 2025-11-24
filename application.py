@@ -127,31 +127,7 @@ def coherence(x: np.ndarray, y: np.ndarray, fs: float, nperseg_sec: float,
 def mag2db(x: np.ndarray, eps: float = 1e-20) -> np.ndarray:
     return 10.0 * np.log10(np.maximum(x, eps))
 
-# Function to find peaks
-def find_peak_in_band(f: np.ndarray, pxx: np.ndarray, fmin: float, fmax: float,
-                      min_prom_db: float = 6.0) -> Optional[Tuple[float, float]]:
-    """Return (f_peak, amp_linear) or None if not found. The idea here is to find the peak of vibration.
-    If the natural frequency of vibration decreases, it may be due to loss of stiffness due to failure
-    of blade, erosion or increase in the weight of blade due to snow or water ingress"""
-    band = (f >= fmin) & (f <= fmax)
-    if not np.any(band):
-        return None
-    fb, pb = f[band], pxx[band]
-    # Use prominence on dB scale
-    y = mag2db(pb)
-    # Dynamic prominence threshold relative to local median
-    baseline = np.median(y)
-    prom = max(min_prom_db, 0.0)
-    peaks, props = signal.find_peaks(y, prominence=prom)
-    if peaks.size == 0:
-        # Try relative threshold
-        peaks, props = signal.find_peaks(y, height=baseline + prom)
-        if peaks.size == 0:
-            return None
-    idx = peaks[np.argmax(y[peaks])]
-    return float(fb[idx]), float(pb[idx])
 
-# Function to find the peak modes to analyse the dominant mode of vibration
 # Function to find the peak modes to analyse the dominant mode of vibration
 def cross_spectral_matrix(X: np.ndarray, fs: float, nperseg_sec: float, noverlap_ratio: float = 0.5):
     """
@@ -214,6 +190,7 @@ st.title("Wind Sense ༄𖣘: Smart Condition Monitoring for Wind Turbines")
 
 tab0, tab1, tab2, tab3, tab4 = st.tabs(["Time Domain", "Spectral Analysis", "Coherence Analysis", "Transmissibility", "Modal Analysis"])
 
+# View 1 for time domain
 with tab0:
     subtab = st.radio("Select View", ["Turbine 1", "Turbine 2"], key="subtab0")
     col = []
@@ -246,74 +223,145 @@ with tab0:
             data_T2 = pd.concat([data_T2, df_feat], axis=1)
 
         st.dataframe(data_T2,height=500)
+
+# View 2 for Welch Power Spectral Density
 with tab1:
+    subtab = st.radio("Select View", ["Welch_PSD_Plot", "PSD_at_Modes"], key="subtab1")
+    if subtab == "Welch_PSD_Plot":
     # Build channel names
-    psd_dict = {}
-    axes = ["edge", "span", "flap"]
-    blades = [1, 2, 3]
+        psd_dict = {}
+        axes = ["edge", "span", "flap"]
+        blades = [1, 2, 3]
 
-    blade = st.selectbox("Select Blade", blades, index=0, key=f"blade_selector_tab1")
-    
-    for loc in ["root", "tip"]:
-        for ax in axes:
-            name = f"B{blade}_{loc}_{ax}"
-            z = df1[name].to_numpy(dtype=float)
-            y = preprocess_series(z, fs=fs, hp_cut_hz= hp_cut_hz, hp_order=hp_order, type=detrend)
-            f, Pxx = welch_psd(y, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
-                            window = window, average = average, scaling = scaling)
-            z1 = df2[name].to_numpy(dtype=float)
-            y1 = preprocess_series(z1, fs=fs, hp_cut_hz= hp_cut_hz, hp_order=hp_order, type=detrend)
-            f1, Pxx1 = welch_psd(y1, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
-                            window = window, average = average, scaling = scaling)
-            psd_dict[name] = [(f, Pxx), (f1, Pxx1)]
+        blade = st.selectbox("Select Blade", blades, index=0, key=f"blade_selector_tab1")
+        
+        for loc in ["root", "tip"]:
+            for ax in axes:
+                name = f"B{blade}_{loc}_{ax}"
+                z = df1[name].to_numpy(dtype=float)
+                y = preprocess_series(z, fs=fs, hp_cut_hz= hp_cut_hz, hp_order=hp_order, type=detrend)
+                f, Pxx = welch_psd(y, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
+                                window = window, average = average, scaling = scaling)
+                z1 = df2[name].to_numpy(dtype=float)
+                y1 = preprocess_series(z1, fs=fs, hp_cut_hz= hp_cut_hz, hp_order=hp_order, type=detrend)
+                f1, Pxx1 = welch_psd(y1, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
+                                window = window, average = average, scaling = scaling)
+                psd_dict[name] = [(f, Pxx), (f1, Pxx1)]
 
-    # Welch PSD curves for D (two datasets overlaid per channel)
-    max_plots_per_row = 3  # was ax_plots_per_row
+        # Welch PSD curves for D (two datasets overlaid per channel)
+        max_plots_per_row = 3  # was ax_plots_per_row
 
-    if psd_dict:
-        n = len(psd_dict)
-        ncols = min(max_plots_per_row, n)
-        nrows = int(np.ceil(n / ncols))
+        if psd_dict:
+            n = len(psd_dict)
+            ncols = min(max_plots_per_row, n)
+            nrows = int(np.ceil(n / ncols))
 
-        fig, axes = plt.subplots(
-            nrows, ncols,
-            figsize=(5 * ncols, 3.5 * nrows),
-            squeeze=False,
-            sharex=False, sharey=False  # set True/True if you want common scales
-        )
-        flat_axes = axes.ravel()
+            fig, axes = plt.subplots(
+                nrows, ncols,
+                figsize=(5 * ncols, 3.5 * nrows),
+                squeeze=False,
+                sharex=False, sharey=False  # set True/True if you want common scales
+            )
+            flat_axes = axes.ravel()
 
-        for i, (key, two_psds) in enumerate(psd_dict.items()):
-            ax = flat_axes[i]
-            # Unpack your two PSDs
-            (f0, Pxx0), (f1, Pxx1) = two_psds
+            for i, (key, two_psds) in enumerate(psd_dict.items()):
+                ax = flat_axes[i]
+                # Unpack your two PSDs
+                (f0, Pxx0), (f1, Pxx1) = two_psds
 
-            ax.semilogy(f0, Pxx0, label="Turbine 1",alpha=1)
-            ax.semilogy(f1, Pxx1, label="Turbine 2",alpha=0.8)
-            ax.axvline(0.20833333, color="r", linestyle="--", linewidth=1, label="1P Line")
+                ax.semilogy(f0, Pxx0, label="Turbine 1",alpha=1)
+                ax.semilogy(f1, Pxx1, label="Turbine 2",alpha=0.8)
+                ax.axvline(0.20833333, color="r", linestyle="--", linewidth=1, label="1P Line")
 
 
-            ax.set_title(f"Welch PSD: {key}")
-            ax.set_xlabel("Frequency [Hz]")
-            ax.set_ylabel("PSD [units²/Hz]")
-            ax.grid(True, alpha=0.3)
-            ax.legend(loc="best")
+                ax.set_title(f"Welch PSD: {key}")
+                ax.set_xlabel("Frequency [Hz]")
+                ax.set_ylabel("PSD [units²/Hz]")
+                ax.grid(True, alpha=0.3)
+                ax.legend(loc="best")
 
-        # Hide any unused axes
-        total = nrows * ncols
-        for j in range(n, total):
-            fig.delaxes(flat_axes[j])
+            # Hide any unused axes
+            total = nrows * ncols
+            for j in range(n, total):
+                fig.delaxes(flat_axes[j])
+
+            fig.tight_layout()
+            st.pyplot(fig)
+
+    else:
+        welch_T1 = {}
+        welch_T2 = {}
+
+        axes = ["edge", "span", "flap"]
+        blades = [1, 2, 3]
+
+        blade = st.selectbox("Select Blade", blades, index=0, key=f"blade_selector_tab12")
+        
+        mode_map = {    '1P': 0.208333,
+                        'Mode_1': 1.05,
+                        'Mode_2': 4.3,
+                        'Mode_3': 6.25,
+                        'Mode_4': 8.2,
+                        'Mode_5': 12.5,
+                        'Mode_6': 16.5,
+                        'Mode_7': 21.05,
+                        'Mode_8': 24.85
+                    }
+        selection = st.radio(
+                                "Modes",
+                                options=list(mode_map.keys()),
+                                horizontal=True,
+                                format_func=lambda option: f"{option} ({mode_map[option]} Hz)", key='welch'
+                            )
+
+        f0 = mode_map[selection]
+
+        for loc in ["root", "tip"]:
+            for ax in axes:
+                name = f"B{blade}_{loc}_{ax}"
+                z = df1[name].to_numpy(dtype=float)
+                y = preprocess_series(z, fs=fs, hp_cut_hz= hp_cut_hz, hp_order=hp_order, type=detrend)
+                f, Pxx = welch_psd(y, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
+                                window = window, average = average, scaling = scaling)
+                welch_T1[name] = interp(f,Pxx,f0)
+                z1 = df2[name].to_numpy(dtype=float)
+                y1 = preprocess_series(z1, fs=fs, hp_cut_hz= hp_cut_hz, hp_order=hp_order, type=detrend)
+                f1, Pxx1 = welch_psd(y1, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
+                                window = window, average = average, scaling = scaling)
+                welch_T2[name] = interp(f1,Pxx1,f0)
+        df_1 = pd.DataFrame.from_dict(welch_T1, orient='index',columns=['T1_Welch_1P'])
+        df_2 = pd.DataFrame.from_dict(welch_T2, orient='index',columns=['T2_Welch_1P'])
+        df = pd.concat([df_1,df_2],axis=1)
+
+        x = np.arange(len(df))
+        width = 0.35
+
+        # Plot for increase in amplitudes at first harmonic
+        fig, ax = plt.subplots(figsize=(14, 6))
+
+        # Plot bars
+        ax.bar(x - width/2, df["T1_Welch_1P"], width, label="Turbine 1")
+        ax.bar(x + width/2, df["T2_Welch_1P"], width, label="Turbine 2")
+
+        # Customize
+        ax.set_xticks(x)
+        ax.set_xticklabels(df.index, rotation=90)
+        ax.set_ylabel("PSD [units²/Hz]")
+        ax.set_title(f"T1 vs T2 Welch PSD at {selection} ({f0:.3f} Hz)")
+        ax.legend()
+        ax.grid(axis="y", alpha=0.3)
 
         fig.tight_layout()
+
+        # Display in Streamlit
         st.pyplot(fig)
 
+# View for Coherence Power Spectral Density
 with tab2:
     subtab = st.radio("Select View", ["Coherence_PSD", "Coherence_at_Modes"], key="subtab2")
     if subtab == "Coherence_PSD":
     # Build channel names
         csd_dict = {}
-        Coh_1p_T1 = {}
-        Coh_1p_T2 = {}
         col = list()
         axes = ["edge", "span", "flap"]
         blades = [1, 2, 3]
@@ -336,10 +384,8 @@ with tab2:
             y1 = preprocess_series(z4, fs=fs, hp_cut_hz= hp_cut_hz, hp_order=hp_order, type=detrend)
             f, Cxy = coherence(x, y, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
                             window = window)
-            Coh_1p_T1[(col1,col2)] = interp(f,Cxy,0.20833333333333334)
             f1, Cxy1 = coherence(x1, y1, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
                             window = window)
-            Coh_1p_T2[(col1,col2)] = interp(f1,Cxy1,0.20833333333333334)
             csd_dict[(col1,col2)] =  [(f, Cxy), (f1, Cxy1)]
     # Welch PSD curves for D (two datasets overlaid per channel)
         max_plots_per_row = 3  # was ax_plots_per_row
@@ -381,7 +427,6 @@ with tab2:
             st.pyplot(fig)
 
     else:
-        csd_dict = {}
         Coh_1p_T1 = {}
         Coh_1p_T2 = {}
         col = list()
@@ -428,7 +473,7 @@ with tab2:
             f1, Cxy1 = coherence(x1, y1, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
                             window = window)
             Coh_1p_T2[(col1,col2)] = interp(f1,Cxy1,f0)
-            csd_dict[(col1,col2)] =  [(f, Cxy), (f1, Cxy1)]
+            
 
         df_1 = pd.DataFrame.from_dict(Coh_1p_T1, orient='index',columns=['T1_Coh_1P'])
         df_2 = pd.DataFrame.from_dict(Coh_1p_T2, orient='index',columns=['T2_Coh_1P'])
@@ -457,6 +502,7 @@ with tab2:
         # Display in Streamlit
         st.pyplot(fig)
 
+# View for Transmissibilty Power Spectral Density 
 with tab3:
     subtab = st.radio("Select View", ["Transmissibilty_PSD", "Transmissibilty_at_Modes"], key="subtab3")
     if subtab == "Transmissibilty_PSD":
@@ -478,10 +524,9 @@ with tab3:
                 f1, Pxx1 = welch_psd(y1, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
                                 window = window, average = average, scaling = scaling)
                 psd_dict[name] = [(f, Pxx), (f1, Pxx1)]
-        trans_t1 = []
+        
         t1_psd = []
         t2_psd = []
-        trans_t2 = []
         trans_col = []
         col = list()
         axes = ["edge", "span", "flap"]
@@ -499,12 +544,9 @@ with tab3:
         for i in trans_col:
             t = transmissibility(psd_dict[i[1]][0][1],psd_dict[i[0]][0][1])
             t1_psd.append(t)
-            inter = interp(fsd,t,0.20833333333333334)
-            trans_t1.append(inter)
             t = transmissibility(psd_dict[i[1]][1][1],psd_dict[i[0]][1][1])
             t2_psd.append(t)
-            inter = interp(fsd,t,0.20833333333333334)
-            trans_t2.append(inter)
+
         
         # Comparison of Transmissibility for Turbine 1 and Turbine 2
 
@@ -563,9 +605,8 @@ with tab3:
                 f1, Pxx1 = welch_psd(y1, fs = fs, nperseg_sec = nperseg_sec, noverlap_ratio = noverlap_ratio,
                                 window = window, average = average, scaling = scaling)
                 psd_dict[name] = [(f, Pxx), (f1, Pxx1)]
+        
         trans_t1 = []
-        t1_psd = []
-        t2_psd = []
         trans_t2 = []
         trans_col = []
         col = list()
@@ -583,11 +624,9 @@ with tab3:
                     trans_col.append(pairs[i])
         for i in trans_col:
             t = transmissibility(psd_dict[i[1]][0][1],psd_dict[i[0]][0][1])
-            t1_psd.append(t)
             inter = interp(fsd,t,f0)
             trans_t1.append(inter)
             t = transmissibility(psd_dict[i[1]][1][1],psd_dict[i[0]][1][1])
-            t2_psd.append(t)
             inter = interp(fsd,t,f0)
             trans_t2.append(inter)
         
@@ -620,6 +659,7 @@ with tab3:
         # Display in Streamlit
         st.pyplot(fig,use_container_width=False)
 
+# View for Modal Analysis
 with tab4:
     subtab = st.radio("Select View", ["Frequency Domain Decomposition", "Stochastic Subspace Identification"], key="subtab4")
     if subtab == "Frequency Domain Decomposition":
@@ -679,7 +719,6 @@ with tab4:
         sheet_name = f"Mode_Shapes_B{blade}"
         df = pd.read_excel('mode_shapes.xlsx',sheet_name=sheet_name, na_filter=False)
         st.dataframe(df,width = 2000, hide_index = True)
-
 
 
 
